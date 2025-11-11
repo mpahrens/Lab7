@@ -23,7 +23,16 @@ Mobile-first, single-page prototype for selecting and ranking courses and sectio
   - If any section is ✕, the course displays – (partial) and drops any numeric rank until resolved.
 
 ## Run
-Open `index.html` in a browser. No build tools required.
+Workflow now has a start and end page for metrics collection:
+1. Open `start.html` to initialize a run.
+2. Interact with `index.html` (auto navigation from start).
+3. Press Save to record metrics and navigate to `end.html` for cumulative CSV output.
+
+Recorded per run (localStorage only):
+- Time to complete (seconds)
+- Non-interactive clicks (clicks not on buttons/inputs/links)
+- Course selector taps
+- Section selector taps
 
 ## Notes
 - This is a client-side prototype only. No persistence is implemented; the Save button shows a confirmation toast.

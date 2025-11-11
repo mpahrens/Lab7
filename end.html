@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Run Metrics</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .end-wrap{min-height:100dvh; display:flex; flex-direction:column; align-items:center; padding:2rem 1rem; gap:1.5rem}
+    .metrics-card{background:var(--panel); border:1px solid var(--outline); border-radius:18px; width:min(820px,92vw); padding:1.4rem 1.2rem; box-shadow:var(--shadow)}
+    h1{margin:.25rem 0 1rem; font-size:1.55rem}
+    pre{background:#111318; padding:1rem; border-radius:12px; overflow:auto; font-size:.8rem; line-height:1.3;}
+    .actions{display:flex; gap:.75rem; flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <div class="end-wrap">
+    <div class="metrics-card">
+      <h1>Prototype Run Metrics</h1>
+      <p style="color:var(--muted);">Accumulated CSV of all local runs. Copy and analyze as needed.</p>
+      <pre id="csvOutput">Loading…</pre>
+      <div class="actions">
+        <button class="primary" id="restartBtn">Run Again ▸</button>
+        <button class="ghost" id="clearBtn">Clear Stored Runs</button>
+        <button class="ghost" id="exportBtn">Download CSV</button>
+      </div>
+    </div>
+  </div>
+<script>
+  const ALL_KEY = 'allRunsMetrics';
+  const RUN_KEY = 'currentRunMetrics';
+  function lsGet(key, fallback){ try{ const v = localStorage.getItem(key); return v==null? fallback : v; }catch(e){ return fallback; } }
+  function lsSet(key, value){ try{ localStorage.setItem(key, value); }catch(e){ /* ignore */ } }
+  function formatCSV(rows){
+    const header = ['run_index','started_at_iso','completed_at_iso','duration_seconds','non_interactive_clicks','course_selector_clicks','section_selector_clicks'];
+    const lines = [header.join(',')];
+    rows.forEach((r,i)=>{
+      lines.push([
+        i+1,
+        new Date(r.startedAt).toISOString(),
+        new Date(r.completedAt).toISOString(),
+        r.timeSec ?? (Math.round((r.completedAt - r.startedAt)/100)/10),
+        r.nonInteractiveClicks,
+        r.courseSelectorClicks,
+        r.sectionSelectorClicks
+      ].join(','));
+    });
+    return lines.join('\n');
+  }
+  function readHashRun(){
+    if(location.hash && location.hash.length>1){
+      try{
+        const raw = decodeURIComponent(location.hash.substring(1));
+        const run = JSON.parse(raw);
+        return run && run.startedAt && run.completedAt ? run : null;
+      }catch(e){ return null; }
+    }
+    return null;
+  }
+  function load(){
+    const rows = JSON.parse(lsGet(ALL_KEY,'[]'));
+    const fromHash = readHashRun();
+    if(fromHash){ rows.push(fromHash); lsSet(ALL_KEY, JSON.stringify(rows)); history.replaceState(null,'',location.pathname); }
+    document.getElementById('csvOutput').textContent = rows.length? formatCSV(rows) : 'No runs recorded yet.';
+  }
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    const fresh = { startedAt: Date.now(), nonInteractiveClicks:0, courseSelectorClicks:0, sectionSelectorClicks:0 };
+    lsSet(RUN_KEY, JSON.stringify(fresh));
+    window.location.href='start.html';
+  });
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    if(confirm('Clear all stored run metrics?')){ try{ localStorage.removeItem(ALL_KEY);}catch(e){} load(); }
+  });
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const text = document.getElementById('csvOutput').textContent;
+    const blob = new Blob([text], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'course_pref_runs.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  load();
+</script>
+</body>
+</html>

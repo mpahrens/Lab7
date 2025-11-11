@@ -65,11 +65,13 @@ body{
 
 /* Selectors */
 .selector{
-  --size:28px; min-width:var(--size); min-height:var(--size);
-  display:grid; place-items:center; border-radius:10px; border:2px solid var(--primary);
+  --size:40px; /* enlarged for easier tap */
+  min-width:var(--size); min-height:var(--size);
+  padding:0 .35rem; /* slight horizontal padding keeps number centered */
+  display:grid; place-items:center; border-radius:12px; border:2px solid var(--primary);
   color:var(--primary); background:transparent; cursor:pointer; font-weight:800;
-  transition:border-color .18s ease, color .18s ease, transform .12s ease;
-  position:relative;
+  transition:border-color .18s ease, color .18s ease, transform .12s ease, background .18s;
+  position:relative; touch-action:manipulation;
 }
 .selector.check{border-color:var(--accent); color:var(--accent)}
 .selector.partial{border-color:#ffd166; color:#ffd166}
@@ -91,9 +93,9 @@ body{
 .section{display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.55rem .6rem; border:1px dashed var(--outline); border-radius:10px}
 .section .meta{color:var(--muted); font-size:.92rem}
 .section .sec-btn{
-  --size:28px; min-width:var(--size); min-height:var(--size); display:grid; place-items:center;
+  --size:32px; min-width:var(--size); min-height:var(--size); display:grid; place-items:center;
   border-radius:10px; border:2px solid var(--primary); color:var(--primary); background:transparent; font-weight:800; cursor:pointer;
-  transition:border-color .18s ease, color .18s ease, transform .12s ease
+  transition:border-color .18s ease, color .18s ease, transform .12s ease; touch-action:manipulation
 }
 .section .sec-btn.prefer{border-color:var(--accent); color:var(--accent)}
 .section .sec-btn.exclude{border-color:var(--danger); color:var(--danger)}

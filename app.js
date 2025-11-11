@@ -51,11 +51,33 @@ const state = {
   pulseCode: null,
 };
 
+// Metrics (persisted per-run in localStorage)
+const METRICS_RUN_KEY = 'currentRunMetrics';
+const METRICS_ALL_KEY = 'allRunsMetrics';
+
+function getCurrentRun(){
+  const raw = localStorage.getItem(METRICS_RUN_KEY);
+  if(raw){
+    try { return JSON.parse(raw); } catch(e){ /* ignore */ }
+  }
+  // Fallback: initialize if user landed directly on index.html
+  const fresh = { startedAt: Date.now(), nonInteractiveClicks:0, courseSelectorClicks:0, sectionSelectorClicks:0 };
+  localStorage.setItem(METRICS_RUN_KEY, JSON.stringify(fresh));
+  return fresh;
+}
+function setCurrentRun(run){ localStorage.setItem(METRICS_RUN_KEY, JSON.stringify(run)); }
+function appendRunToAll(run){
+  const all = JSON.parse(localStorage.getItem(METRICS_ALL_KEY)||'[]');
+  all.push(run);
+  localStorage.setItem(METRICS_ALL_KEY, JSON.stringify(all));
+}
+
 const courseListEl = document.getElementById('courseList');
 
 function init(){
   renderCourses();
   wireGlobalEvents();
+  wireMetricsListeners();
 }
 
 function wireGlobalEvents(){
@@ -94,7 +116,16 @@ function closeModal(id){
 }
 
 function savePrefs(){
-  showToast('Preferences saved (demo)');
+  // finalize metrics and navigate to end page
+  const run = getCurrentRun();
+  run.completedAt = Date.now();
+  run.timeSec = Math.max(0, Math.round((run.completedAt - run.startedAt)/100) / 10); // one decimal
+  appendRunToAll(run);
+  setCurrentRun({ startedAt: Date.now(), nonInteractiveClicks:0, courseSelectorClicks:0, sectionSelectorClicks:0 });
+  showToast('Saved! Preparing summary…');
+  // Also pass the run via URL hash as a cross-file:// fallback so end.html can read it even if localStorage is siloed per file.
+  const payload = encodeURIComponent(JSON.stringify(run));
+  setTimeout(()=>{ window.location.href = `end.html#${payload}`; }, 450);
 }
 function showToast(msg){
   const toast = document.getElementById('toast');
@@ -234,10 +265,10 @@ function bindDynamicEvents(){
     });
   });
   document.querySelectorAll('[data-select]').forEach(btn=>{
-    attachTap(btn, (count)=> previewCourseTap(btn, count), (e, count)=> commitCourseMulti(btn, count));
+    attachTap(btn, (count)=>{ metricsCountCourseTap(); previewCourseTap(btn, count); }, (e, count)=> commitCourseMulti(btn, count));
   });
   document.querySelectorAll('[data-sec-btn]').forEach(btn=>{
-    btn.addEventListener('click', ()=> { addTapFeedback(btn); handleSectionClick(btn); });
+    btn.addEventListener('click', ()=> { metricsCountSectionTap(); addTapFeedback(btn); handleSectionClick(btn); });
   });
   // run any pending pulses after elements exist
   triggerPulse();
@@ -383,6 +414,22 @@ function removeRank(code){
   // reassign numbers
   state.topRanks.forEach((c,i)=> computeCourseState(c).rank = i+1);
 }
+
+// Metrics helpers and listeners
+function wireMetricsListeners(){
+  // Count clicks not on clickable elements
+  document.addEventListener('click', (e)=>{
+    const target = e.target;
+    const clickable = target.closest('button, a, [role="button"], input, select, textarea, label, summary');
+    if(!clickable){
+      const run = getCurrentRun();
+      run.nonInteractiveClicks++;
+      setCurrentRun(run);
+    }
+  }, true);
+}
+function metricsCountCourseTap(){ const run = getCurrentRun(); run.courseSelectorClicks++; setCurrentRun(run); }
+function metricsCountSectionTap(){ const run = getCurrentRun(); run.sectionSelectorClicks++; setCurrentRun(run); }
 
 // Overlay animated number hint
 function showTapHint(btn, count){
